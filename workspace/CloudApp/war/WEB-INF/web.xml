@@ -4,27 +4,14 @@ xmlns="http://java.sun.com/xml/ns/javaee"
 xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
-    <filter>
-   	<filter-name>AuthFilter</filter-name>
-        <display-name>AuthFilter</display-name>
-        <description>Authentication filter</description>
-  	<filter-class>cloudapp.AuthFilter</filter-class>
-    </filter>
-    <filter-mapping>
-  		<filter-name>AuthFilter</filter-name>
-  		<url-pattern>/userlist.jsp</url-pattern>
-    </filter-mapping>
-    <filter-mapping>
-  		<filter-name>AuthFilter</filter-name>
-  		<servlet-name>TestServer</servlet-name>
-    </filter-mapping>         
+             
 	<servlet>
 		<servlet-name>RootCertServlet</servlet-name>
 		<servlet-class>cloudapp.RootCertServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>RootCertServlet</servlet-name>
-		<url-pattern>/rootcert</url-pattern>
+		<url-pattern>/admin/rootcert</url-pattern>
 	</servlet-mapping>
 	<servlet>
 		<servlet-name>UserListServlet</servlet-name>
@@ -32,7 +19,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>UserListServlet</servlet-name>
-		<url-pattern>/userlist</url-pattern>
+		<url-pattern>/admin/userlist</url-pattern>
 	</servlet-mapping>
 	<servlet>
 		<servlet-name>UserCertServlet</servlet-name>
@@ -42,10 +29,25 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>UserCertServlet</servlet-name>
 		<url-pattern>/usercert</url-pattern>
 	</servlet-mapping>	
+	
     <listener>
         <listener-class>cloudapp.ContextInitializer</listener-class>
     </listener>	
+    
 	<welcome-file-list>
-		<welcome-file>index.html</welcome-file>
+		<welcome-file>main.jsp</welcome-file>
 	</welcome-file-list>
+	
+    <security-constraint>
+        <web-resource-collection>
+            <url-pattern>/admin/*</url-pattern>
+        </web-resource-collection>
+        <user-data-constraint>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint>
+        <auth-constraint>
+            <role-name>admin</role-name>
+        </auth-constraint>
+    </security-constraint>	
+       
 </web-app>
