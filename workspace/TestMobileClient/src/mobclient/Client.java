@@ -4,39 +4,65 @@ import java.io.*;
 import java.security.*;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.spec.*;
 import java.net.URL;
 import java.net.HttpURLConnection;
 import java.lang.System;
-import java.security.SecureRandom;
-import java.math.BigInteger;
-
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.DESedeKeySpec;
 import javax.crypto.spec.IvParameterSpec;
+
+import org.apache.commons.ssl.Base64;
 
 public class Client {	
 	private static String signMessage(String msg) 
 		throws Exception {
+
+		Key key = getKey();
+		Signature sig = Signature.getInstance("SHA256withRSA");
+		sig.initSign((PrivateKey) key);
+		byte[] data = msg.getBytes("UTF8");
+	    sig.update(data);
+		byte[] signatureBytes = sig.sign();
+		String result = Base64.encodeBase64URLSafeString(signatureBytes);
+		System.out.println("Singature:" + result);
+		return result;
+	}
+	
+	private static String encryptMessage(String msg)
+		throws Exception {
+		X509Certificate cert = getCertificate();
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, cert);
+
+		byte[] data = msg.getBytes("UTF8");
+		byte[] encryptedBytes = cipher.doFinal(data);
+		String result = Base64.encodeBase64URLSafeString(encryptedBytes);
+		System.out.println("Cipher:" + result);
 		
-		FileInputStream in = new FileInputStream("res/rsaprivkey.pem");
-		long length = in.available();	
-		if (length > Integer.MAX_VALUE) {
-			return null;
-			//throw new IOException("The file is too big");
-		}
-		byte[] privKeyBytes = new byte[(int)length];	
-		in.read(privKeyBytes);
-		PKCS8EncodedKeySpec pkcs8Spec = new PKCS8EncodedKeySpec(privKeyBytes);
-		KeyFactory          keyFact = KeyFactory.getInstance("RSA");
-		PrivateKey          privKey = keyFact.generatePrivate(pkcs8Spec);
+		return result;
+	}
+	
+	private static void prepareAuthRequest() 
+		throws Exception {
 		
-		return null;
+		String userParam = "algaraga";
+		long timeInMillis = System.currentTimeMillis();
+		String timestampParam = Long.toString(timeInMillis);
+		String password = RandomPassword.generate(8);
+		String mac = "00-00-00-00-00-00-00-E0";
+		String destParam = "agaraga-test";
+		String secretParam = encryptMessage(password + mac);
+		
+		QueryString qs = new QueryString("user", userParam);
+		qs.add("timestamp", timestampParam);
+		qs.add("dest", destParam);
+		qs.add("secret", secretParam);
+		qs.add("signature", signMessage(userParam + timestampParam + destParam + secretParam));
+		String query = qs.getQuery();
+		System.out.println("Query:" + query);
 	}
 	
 	private static void sendCertificate() 
@@ -119,9 +145,49 @@ public class Client {
 		} 
 	}
 	
+	public static Key getKey() 
+	throws Exception {
+		char[] pass = "morkovka".toCharArray();
+		String name = "res/smart.jks";
+		String alias = "algaraga";
+	    KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+	    
+	    FileInputStream fis = null;
+	    try {
+	        fis = new FileInputStream(name);
+	        ks.load(fis, pass);
+	        Key key = ks.getKey(alias, pass);
+	        return key;
+	    } finally {
+	        if (fis != null) {
+	            fis.close();
+	        }
+	    }		
+	}
+	
+	public static X509Certificate getCertificate()
+		throws Exception {
+		char[] pass = "morkovka".toCharArray();
+		String name = "res/smart.jks";
+		String alias = "agaraga-test.appspot.com";
+	    KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+	    
+	    FileInputStream fis = null;
+	    try {
+	        fis = new FileInputStream(name);
+	        ks.load(fis, pass);
+	        X509Certificate cert = (X509Certificate) ks.getCertificate(alias);
+	        return cert;
+	    } finally {
+	        if (fis != null) {
+	            fis.close();
+	        }
+	    }		
+	}
+	
 	public static void main(String[] args) {		
 		try {
-			authenticate();
+			prepareAuthRequest();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
